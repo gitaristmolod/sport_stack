@@ -138,15 +138,42 @@
         canvas.height = window.innerHeight - 60;
 
         const BALL_TYPES = {
-            'ping_pong': { radius: 15, color: '#FFFFFF', emoji: '🏓', next: 'tennis', points: 15 },
-            'tennis': { radius: 20, color: '#ADFF2F', emoji: '🎾', next: 'baseball', points: 30 },
-            'baseball': { radius: 25, color: '#FFFFFF', emoji: '⚾', next: 'volleyball', points: 50 },
-            'volleyball': { radius: 35, color: '#FFFFFF', emoji: '🏐', next: 'football', points: 80 },
-            'football': { radius: 40, color: '#FFFFFF', emoji: '⚽', next: 'basketball', points: 120 },
-            'basketball': { radius: 50, color: '#FF8C00', emoji: '🏀', next: 'bowling', points: 170 },
-            'bowling': { radius: 60, color: '#000000', emoji: '🎳', next: 'medicine', points: 230 },
-            'medicine': { radius: 75, color: '#8B4513', emoji: '⚖️', next: 'exercise', points: 300 },
-            'exercise': { radius: 95, color: '#4682B4', emoji: '💪', next: null, points: 400 }
+            'ping_pong': { 
+                radius: 15, color: '#FFFFFF', emoji: '🏓', next: 'tennis', points: 15,
+                mass: 0.3, bounce: 0.9, friction: 0.98
+            },
+            'tennis': { 
+                radius: 20, color: '#ADFF2F', emoji: '🎾', next: 'baseball', points: 30,
+                mass: 0.8, bounce: 0.85, friction: 0.97
+            },
+            'baseball': { 
+                radius: 25, color: '#FFFFFF', emoji: '⚾', next: 'volleyball', points: 50,
+                mass: 2.0, bounce: 0.6, friction: 0.95
+            },
+            'volleyball': { 
+                radius: 35, color: '#FFFFFF', emoji: '🏐', next: 'football', points: 80,
+                mass: 3.5, bounce: 0.8, friction: 0.96
+            },
+            'football': { 
+                radius: 40, color: '#FFFFFF', emoji: '⚽', next: 'basketball', points: 120,
+                mass: 5.0, bounce: 0.75, friction: 0.94
+            },
+            'basketball': { 
+                radius: 50, color: '#FF8C00', emoji: '🏀', next: 'bowling', points: 170,
+                mass: 7.0, bounce: 0.82, friction: 0.95
+            },
+            'bowling': { 
+                radius: 60, color: '#000000', emoji: '🎳', next: 'medicine', points: 230,
+                mass: 80.0, bounce: 0.2, friction: 0.85
+            },
+            'medicine': { 
+                radius: 75, color: '#8B4513', emoji: '⚖️', next: 'exercise', points: 300,
+                mass: 120.0, bounce: 0.3, friction: 0.88
+            },
+            'exercise': { 
+                radius: 95, color: '#4682B4', emoji: '💪', next: null, points: 400,
+                mass: 150.0, bounce: 0.5, friction: 0.90
+            }
         };
 
         class Ball {
@@ -156,6 +183,9 @@
                 this.type = type;
                 this.radius = BALL_TYPES[type].radius;
                 this.color = BALL_TYPES[type].color;
+                this.mass = BALL_TYPES[type].mass;
+                this.bounce = BALL_TYPES[type].bounce;
+                this.friction = BALL_TYPES[type].friction;
                 this.vx = 0;
                 this.vy = 0;
                 this.merged = false;
@@ -220,31 +250,44 @@
             }
 
             updatePhysics() {
-                const gravity = 0.5;
-                const damping = 0.95;
+                const gravity = 0.35;
 
                 for (let ball of this.balls) {
                     if (ball.merged) continue;
 
                     ball.age++;
-                    ball.vy += gravity;
+                    
+                    // Гравитация с учетом массы (тяжелые падают быстрее ощутимо)
+                    ball.vy += gravity * (1 + ball.mass * 0.01);
+                    
+                    // Обновление позиции
                     ball.x += ball.vx;
                     ball.y += ball.vy;
 
+                    // Столкновение с левой стенкой
                     if (ball.x - ball.radius < this.containerLeft) {
                         ball.x = this.containerLeft + ball.radius;
-                        ball.vx *= -damping;
+                        ball.vx *= -ball.bounce;
                     }
+                    
+                    // Столкновение с правой стенкой
                     if (ball.x + ball.radius > this.containerRight) {
                         ball.x = this.containerRight - ball.radius;
-                        ball.vx *= -damping;
+                        ball.vx *= -ball.bounce;
                     }
+                    
+                    // Столкновение с дном
                     if (ball.y + ball.radius > this.containerBottom) {
                         ball.y = this.containerBottom - ball.radius;
-                        ball.vy *= -damping;
-                        ball.vx *= damping;
+                        ball.vy *= -ball.bounce;
+                        ball.vx *= ball.friction;
+                        
+                        // Останавливаем очень медленные движения
+                        if (Math.abs(ball.vy) < 0.5) ball.vy = 0;
+                        if (Math.abs(ball.vx) < 0.3) ball.vx = 0;
                     }
 
+                    // Проверка game over
                     if (ball.y - ball.radius < this.containerY && ball.age > 60 && Math.abs(ball.vy) < 1) {
                         this.endGame();
                     }
@@ -269,22 +312,43 @@
                         const dist = Math.sqrt(dx * dx + dy * dy);
                         const minDist = b1.radius + b2.radius;
 
-                        if (dist < minDist) {
-                            const overlap = minDist - dist;
+                        if (dist < minDist && dist > 0) {
+                            // Нормализованный вектор столкновения
                             const nx = dx / dist;
                             const ny = dy / dist;
+                            
+                            // Разделяем мячи чтобы они не пересекались
+                            const overlap = minDist - dist;
+                            const totalMass = b1.mass + b2.mass;
+                            const ratio1 = b2.mass / totalMass;
+                            const ratio2 = b1.mass / totalMass;
+                            
+                            b1.x -= nx * overlap * ratio1;
+                            b1.y -= ny * overlap * ratio1;
+                            b2.x += nx * overlap * ratio2;
+                            b2.y += ny * overlap * ratio2;
 
-                            const impulse = overlap * 0.1;
-                            b1.vx -= nx * impulse;
-                            b1.vy -= ny * impulse;
-                            b2.vx += nx * impulse;
-                            b2.vy += ny * impulse;
+                            // Относительная скорость
+                            const dvx = b2.vx - b1.vx;
+                            const dvy = b2.vy - b1.vy;
+                            const dvn = dvx * nx + dvy * ny;
 
-                            b1.x -= nx * overlap * 0.5;
-                            b1.y -= ny * overlap * 0.5;
-                            b2.x += nx * overlap * 0.5;
-                            b2.y += ny * overlap * 0.5;
+                            // Мячи отталкиваются только если движутся друг к другу
+                            if (dvn < 0) {
+                                // Коэффициент реституции (упругость столкновения)
+                                const restitution = Math.min(b1.bounce, b2.bounce);
+                                
+                                // Импульс с учетом массы
+                                const impulse = (-(1 + restitution) * dvn) / (1/b1.mass + 1/b2.mass);
+                                
+                                // Применяем импульс
+                                b1.vx -= (impulse / b1.mass) * nx;
+                                b1.vy -= (impulse / b1.mass) * ny;
+                                b2.vx += (impulse / b2.mass) * nx;
+                                b2.vy += (impulse / b2.mass) * ny;
+                            }
 
+                            // Слияние одинаковых мячей
                             if (b1.type === b2.type && b1.age > 30 && b2.age > 30) {
                                 mergedPairs.push([i, j]);
                             }
@@ -292,17 +356,24 @@
                     }
                 }
 
+                // Выполняем слияния
                 for (let [i, j] of mergedPairs) {
                     const b1 = this.balls[i];
                     const b2 = this.balls[j];
                     const nextType = BALL_TYPES[b1.type].next;
 
                     if (nextType) {
+                        const totalMass = b1.mass + b2.mass;
                         const newBall = new Ball(
-                            (b1.x + b2.x) / 2,
-                            (b1.y + b2.y) / 2,
+                            (b1.x * b1.mass + b2.x * b2.mass) / totalMass,
+                            (b1.y * b1.mass + b2.y * b2.mass) / totalMass,
                             nextType
                         );
+                        
+                        // Передаем импульс новому мячу
+                        newBall.vx = (b1.vx * b1.mass + b2.vx * b2.mass) / totalMass * 0.5;
+                        newBall.vy = (b1.vy * b1.mass + b2.vy * b2.mass) / totalMass * 0.5;
+                        
                         this.balls.push(newBall);
                         this.score += BALL_TYPES[nextType].points;
                         scoreElement.textContent = this.score;
