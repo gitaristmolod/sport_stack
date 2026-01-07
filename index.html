@@ -22,12 +22,73 @@
             touch-action: none;
         }
 
+        #mainMenu {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            padding: 20px;
+        }
+
+        #mainMenu h1 {
+            font-size: 48px;
+            color: white;
+            margin-bottom: 10px;
+            text-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+
+        #mainMenu p {
+            color: rgba(255,255,255,0.9);
+            font-size: 16px;
+            margin-bottom: 40px;
+            text-align: center;
+        }
+
+        .menu-btn {
+            width: 280px;
+            padding: 18px;
+            margin: 8px;
+            background: rgba(255, 255, 255, 0.95);
+            border: none;
+            border-radius: 15px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .menu-btn:active {
+            transform: scale(0.95);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+
+        .menu-btn.primary {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+            color: white;
+        }
+
         #gameContainer {
             position: relative;
             width: 100vw;
             height: 100vh;
-            display: flex;
+            display: none;
             flex-direction: column;
+        }
+
+        #gameContainer.active {
+            display: flex;
         }
 
         #topBar {
@@ -39,6 +100,16 @@
             color: white;
             font-weight: bold;
             backdrop-filter: blur(10px);
+        }
+
+        #menuButton {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            padding: 8px 15px;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
         }
 
         #score {
@@ -58,7 +129,7 @@
             background: linear-gradient(to bottom, #2c3e50 0%, #34495e 100%);
         }
 
-        #gameOver {
+        #gameOver, #pauseMenu, #ratingScreen, #settingsScreen, #helpScreen {
             position: absolute;
             top: 50%;
             left: 50%;
@@ -70,43 +141,93 @@
             color: white;
             display: none;
             z-index: 1000;
+            max-width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        #gameOver h1, #pauseMenu h1, #ratingScreen h1, #settingsScreen h1, #helpScreen h1 {
+            font-size: 36px;
+            margin-bottom: 20px;
         }
 
         #gameOver h1 {
-            font-size: 48px;
-            margin-bottom: 20px;
             color: #e74c3c;
         }
 
-        #gameOver p {
-            font-size: 24px;
+        #gameOver p, #pauseMenu p {
+            font-size: 20px;
             margin-bottom: 30px;
         }
 
-        #restartBtn {
+        .game-btn {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             border: none;
             color: white;
             padding: 15px 40px;
-            font-size: 20px;
+            font-size: 18px;
             border-radius: 10px;
             cursor: pointer;
             font-weight: bold;
             transition: transform 0.2s;
+            margin: 5px;
         }
 
-        #restartBtn:active {
+        .game-btn:active {
             transform: scale(0.95);
+        }
+
+        .game-btn.secondary {
+            background: rgba(255, 255, 255, 0.1);
         }
 
         .emoji {
             font-size: 32px;
         }
+
+        #ratingList {
+            text-align: left;
+            margin: 20px 0;
+            font-size: 16px;
+        }
+
+        .rating-item {
+            padding: 10px;
+            margin: 5px 0;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+        }
+
+        .settings-option, .help-section {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 10px;
+            text-align: left;
+        }
+
+        .help-section h3 {
+            margin-bottom: 10px;
+            color: #667eea;
+        }
     </style>
 </head>
 <body>
+    <!-- ГЛАВНОЕ МЕНЮ -->
+    <div id="mainMenu">
+        <h1>🏆 SPORT STACK</h1>
+        <p>Стекирование спортивных мячей</p>
+        <button class="menu-btn primary" onclick="startGame()">🎮 НАЧАТЬ ИГРУ</button>
+        <button class="menu-btn" onclick="showRating()">🏆 РЕЙТИНГ</button>
+        <button class="menu-btn" onclick="showSettings()">⚙️ НАСТРОЙКИ</button>
+        <button class="menu-btn" onclick="showHelp()">ℹ️ ПОМОЩЬ</button>
+        <button class="menu-btn" onclick="exitGame()">❌ ВЫХОД</button>
+    </div>
+
+    <!-- ИГРА -->
     <div id="gameContainer">
         <div id="topBar">
+            <button id="menuButton" onclick="pauseGame()">☰ МЕНЮ</button>
             <div id="score">СЧЁТ: <span id="scoreValue">0</span></div>
             <div id="nextBall">
                 <span>ДАЛЬШЕ:</span>
@@ -114,11 +235,71 @@
             </div>
         </div>
         <canvas id="canvas"></canvas>
+        
+        <!-- GAME OVER -->
         <div id="gameOver">
             <h1>GAME OVER!</h1>
             <p>Финальный счёт: <span id="finalScore">0</span></p>
-            <button id="restartBtn">🔄 НОВАЯ ИГРА</button>
+            <button class="game-btn" onclick="restartGame()">🔄 ЕЩЁ РАЗ</button>
+            <button class="game-btn secondary" onclick="backToMenu()">🏠 В МЕНЮ</button>
         </div>
+
+        <!-- ПАУЗА -->
+        <div id="pauseMenu">
+            <h1>ПАУЗА</h1>
+            <p>Игра приостановлена</p>
+            <button class="game-btn" onclick="resumeGame()">▶️ ПРОДОЛЖИТЬ</button>
+            <button class="game-btn secondary" onclick="restartGame()">🔄 ЗАНОВО</button>
+            <button class="game-btn secondary" onclick="backToMenu()">🏠 В МЕНЮ</button>
+        </div>
+    </div>
+
+    <!-- РЕЙТИНГ -->
+    <div id="ratingScreen">
+        <h1>🏆 РЕЙТИНГ</h1>
+        <div id="ratingList">
+            <div class="rating-item">🥇 1. Игрок 1: 1250 очков</div>
+            <div class="rating-item">🥈 2. Игрок 2: 980 очков</div>
+            <div class="rating-item">🥉 3. Игрок 3: 750 очков</div>
+            <div class="rating-item">4. Вы: 0 очков</div>
+        </div>
+        <button class="game-btn" onclick="hideRating()">◀️ НАЗАД</button>
+    </div>
+
+    <!-- НАСТРОЙКИ -->
+    <div id="settingsScreen">
+        <h1>⚙️ НАСТРОЙКИ</h1>
+        <div class="settings-option">
+            <strong>🔊 Звук:</strong> Включен ✅
+        </div>
+        <div class="settings-option">
+            <strong>📳 Вибрация:</strong> Включена ✅
+        </div>
+        <div class="settings-option">
+            <strong>🎨 Тема:</strong> Тёмная 🌙
+        </div>
+        <button class="game-btn" onclick="hideSettings()">◀️ НАЗАД</button>
+    </div>
+
+    <!-- ПОМОЩЬ -->
+    <div id="helpScreen">
+        <h1>ℹ️ ПОМОЩЬ</h1>
+        <div class="help-section">
+            <h3>🎯 КАК ИГРАТЬ:</h3>
+            <p>• Тапайте по экрану чтобы бросить мяч<br>
+            • Двигайте пальцем для выбора позиции<br>
+            • Соединяйте одинаковые мячи<br>
+            • Не дайте выйти за красную линию!</p>
+        </div>
+        <div class="help-section">
+            <h3>🏓 ЦЕПОЧКА МЯЧЕЙ:</h3>
+            <p>🏓 Пинг-понг (15) → 🎾 Теннис (30)<br>
+            ⚾ Бейсбол (50) → 🏐 Волейбол (80)<br>
+            ⚽ Футбол (120) → 🏀 Баскетбол (170)<br>
+            🎳 Боулинг (230) → ⚖️ Медбол (300)<br>
+            💪 Фитбол (400) - максимальный!</p>
+        </div>
+        <button class="game-btn" onclick="hideHelp()">◀️ НАЗАД</button>
     </div>
 
     <script>
@@ -130,9 +311,14 @@
         const ctx = canvas.getContext('2d');
         const scoreElement = document.getElementById('scoreValue');
         const nextBallEmoji = document.getElementById('nextBallEmoji');
+        const gameContainer = document.getElementById('gameContainer');
+        const mainMenu = document.getElementById('mainMenu');
         const gameOverDiv = document.getElementById('gameOver');
+        const pauseMenuDiv = document.getElementById('pauseMenu');
         const finalScoreElement = document.getElementById('finalScore');
-        const restartBtn = document.getElementById('restartBtn');
+
+        let game = null;
+        let isPaused = false;
 
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight - 60;
@@ -237,7 +423,7 @@
             }
 
             dropBall() {
-                if (this.gameOver || this.isDropping) return;
+                if (this.gameOver || this.isDropping || isPaused) return;
                 this.isDropping = true;
                 const ball = new Ball(this.dropX, this.containerY - 30, this.nextBallType);
                 this.balls.push(ball);
@@ -250,48 +436,38 @@
             }
 
             updatePhysics() {
+                if (isPaused) return;
+                
                 const gravity = 0.35;
 
                 for (let ball of this.balls) {
                     if (ball.merged) continue;
 
                     ball.age++;
-                    
-                    // Гравитация с учетом массы (тяжелые падают быстрее ощутимо)
                     ball.vy += gravity * (1 + ball.mass * 0.01);
-                    
-                    // Обновление позиции
                     ball.x += ball.vx;
                     ball.y += ball.vy;
 
-                    // Столкновение с левой стенкой
                     if (ball.x - ball.radius < this.containerLeft) {
                         ball.x = this.containerLeft + ball.radius;
                         ball.vx *= -ball.bounce;
                     }
-                    
-                    // Столкновение с правой стенкой
                     if (ball.x + ball.radius > this.containerRight) {
                         ball.x = this.containerRight - ball.radius;
                         ball.vx *= -ball.bounce;
                     }
-                    
-                    // Столкновение с дном
                     if (ball.y + ball.radius > this.containerBottom) {
                         ball.y = this.containerBottom - ball.radius;
                         ball.vy *= -ball.bounce;
                         ball.vx *= ball.friction;
                         
-                        // Останавливаем очень медленные движения
                         if (Math.abs(ball.vy) < 0.5) ball.vy = 0;
                         if (Math.abs(ball.vx) < 0.3) ball.vx = 0;
                     }
 
-                    // Применяем затухание к медленным движениям
                     if (Math.abs(ball.vx) < 1.5) ball.vx *= 0.98;
                     if (Math.abs(ball.vy) < 1.5) ball.vy *= 0.98;
 
-                    // Проверка game over
                     if (ball.y - ball.radius < this.containerY && ball.age > 60 && Math.abs(ball.vy) < 1) {
                         this.endGame();
                     }
@@ -317,11 +493,9 @@
                         const minDist = b1.radius + b2.radius;
 
                         if (dist < minDist && dist > 0) {
-                            // Нормализованный вектор столкновения
                             const nx = dx / dist;
                             const ny = dy / dist;
                             
-                            // Разделяем мячи чтобы они не пересекались
                             const overlap = minDist - dist;
                             const totalMass = b1.mass + b2.mass;
                             const ratio1 = b2.mass / totalMass;
@@ -332,20 +506,14 @@
                             b2.x += nx * overlap * ratio2;
                             b2.y += ny * overlap * ratio2;
 
-                            // Относительная скорость
                             const dvx = b2.vx - b1.vx;
                             const dvy = b2.vy - b1.vy;
                             const dvn = dvx * nx + dvy * ny;
 
-                            // Мячи отталкиваются только если движутся друг к другу
                             if (dvn < 0) {
-                                // Коэффициент реституции (упругость столкновения)
                                 const restitution = Math.min(b1.bounce, b2.bounce);
-                                
-                                // Импульс с учетом массы
                                 const impulse = (-(1 + restitution) * dvn) / (1/b1.mass + 1/b2.mass);
                                 
-                                // Применяем импульс
                                 const impulseX = (impulse / b1.mass) * nx;
                                 const impulseY = (impulse / b1.mass) * ny;
                                 
@@ -354,7 +522,6 @@
                                 b2.vx += (impulse / b2.mass) * nx;
                                 b2.vy += (impulse / b2.mass) * ny;
                                 
-                                // Останавливаем микро-колебания
                                 if (Math.abs(impulseX) < 0.1) {
                                     b1.vx *= 0.5;
                                     b2.vx *= 0.5;
@@ -364,7 +531,6 @@
                                     b2.vy *= 0.5;
                                 }
                             } else {
-                                // Если мячи лежат спокойно - снижаем микро-движения
                                 if (Math.abs(b1.vx) < 0.5 && Math.abs(b1.vy) < 0.5) {
                                     b1.vx *= 0.8;
                                     b1.vy *= 0.8;
@@ -375,7 +541,6 @@
                                 }
                             }
 
-                            // Слияние одинаковых мячей
                             if (b1.type === b2.type && b1.age > 30 && b2.age > 30) {
                                 mergedPairs.push([i, j]);
                             }
@@ -383,7 +548,6 @@
                     }
                 }
 
-                // Выполняем слияния
                 for (let [i, j] of mergedPairs) {
                     const b1 = this.balls[i];
                     const b2 = this.balls[j];
@@ -397,7 +561,6 @@
                             nextType
                         );
                         
-                        // Передаем импульс новому мячу
                         newBall.vx = (b1.vx * b1.mass + b2.vx * b2.mass) / totalMass * 0.5;
                         newBall.vy = (b1.vy * b1.mass + b2.vy * b2.mass) / totalMass * 0.5;
                         
@@ -466,18 +629,79 @@
                 if (tg.HapticFeedback) {
                     tg.HapticFeedback.notificationOccurred('error');
                 }
-                
-                tg.MainButton.setText('НОВАЯ ИГРА');
-                tg.MainButton.show();
-                tg.MainButton.onClick(() => {
-                    location.reload();
-                });
             }
         }
 
-        const game = new Game();
+        function startGame() {
+            mainMenu.style.display = 'none';
+            gameContainer.classList.add('active');
+            game = new Game();
+            isPaused = false;
+            gameLoop();
+        }
+
+        function pauseGame() {
+            isPaused = true;
+            pauseMenuDiv.style.display = 'block';
+        }
+
+        function resumeGame() {
+            isPaused = false;
+            pauseMenuDiv.style.display = 'none';
+        }
+
+        function restartGame() {
+            gameOverDiv.style.display = 'none';
+            pauseMenuDiv.style.display = 'none';
+            game = new Game();
+            isPaused = false;
+            scoreElement.textContent = '0';
+        }
+
+        function backToMenu() {
+            gameContainer.classList.remove('active');
+            mainMenu.style.display = 'flex';
+            gameOverDiv.style.display = 'none';
+            pauseMenuDiv.style.display = 'none';
+            game = null;
+        }
+
+        function showRating() {
+            mainMenu.style.display = 'none';
+            document.getElementById('ratingScreen').style.display = 'block';
+        }
+
+        function hideRating() {
+            document.getElementById('ratingScreen').style.display = 'none';
+            mainMenu.style.display = 'flex';
+        }
+
+        function showSettings() {
+            mainMenu.style.display = 'none';
+            document.getElementById('settingsScreen').style.display = 'block';
+        }
+
+        function hideSettings() {
+            document.getElementById('settingsScreen').style.display = 'none';
+            mainMenu.style.display = 'flex';
+        }
+
+        function showHelp() {
+            mainMenu.style.display = 'none';
+            document.getElementById('helpScreen').style.display = 'block';
+        }
+
+        function hideHelp() {
+            document.getElementById('helpScreen').style.display = 'none';
+            mainMenu.style.display = 'flex';
+        }
+
+        function exitGame() {
+            tg.close();
+        }
 
         canvas.addEventListener('touchstart', (e) => {
+            if (!game || isPaused) return;
             e.preventDefault();
             const touch = e.touches[0];
             const rect = canvas.getBoundingClientRect();
@@ -486,6 +710,7 @@
         });
 
         canvas.addEventListener('touchmove', (e) => {
+            if (!game || isPaused) return;
             e.preventDefault();
             const touch = e.touches[0];
             const rect = canvas.getBoundingClientRect();
@@ -494,30 +719,29 @@
         });
 
         canvas.addEventListener('touchend', (e) => {
+            if (!game || isPaused) return;
             e.preventDefault();
             game.dropBall();
         });
 
         canvas.addEventListener('click', (e) => {
+            if (!game || isPaused) return;
             const rect = canvas.getBoundingClientRect();
             game.dropX = e.clientX - rect.left;
             game.dropX = Math.max(game.containerLeft + 30, Math.min(game.containerRight - 30, game.dropX));
             game.dropBall();
         });
 
-        restartBtn.addEventListener('click', () => {
-            location.reload();
-        });
-
         function gameLoop() {
-            if (!game.gameOver) {
+            if (game && !game.gameOver) {
                 game.updatePhysics();
             }
-            game.render();
+            if (game) {
+                game.render();
+            }
             requestAnimationFrame(gameLoop);
         }
 
-        gameLoop();
         tg.ready();
     </script>
 </body>
