@@ -287,6 +287,10 @@
                         if (Math.abs(ball.vx) < 0.3) ball.vx = 0;
                     }
 
+                    // Применяем затухание к медленным движениям
+                    if (Math.abs(ball.vx) < 1.5) ball.vx *= 0.98;
+                    if (Math.abs(ball.vy) < 1.5) ball.vy *= 0.98;
+
                     // Проверка game over
                     if (ball.y - ball.radius < this.containerY && ball.age > 60 && Math.abs(ball.vy) < 1) {
                         this.endGame();
@@ -342,10 +346,33 @@
                                 const impulse = (-(1 + restitution) * dvn) / (1/b1.mass + 1/b2.mass);
                                 
                                 // Применяем импульс
-                                b1.vx -= (impulse / b1.mass) * nx;
-                                b1.vy -= (impulse / b1.mass) * ny;
+                                const impulseX = (impulse / b1.mass) * nx;
+                                const impulseY = (impulse / b1.mass) * ny;
+                                
+                                b1.vx -= impulseX;
+                                b1.vy -= impulseY;
                                 b2.vx += (impulse / b2.mass) * nx;
                                 b2.vy += (impulse / b2.mass) * ny;
+                                
+                                // Останавливаем микро-колебания
+                                if (Math.abs(impulseX) < 0.1) {
+                                    b1.vx *= 0.5;
+                                    b2.vx *= 0.5;
+                                }
+                                if (Math.abs(impulseY) < 0.1) {
+                                    b1.vy *= 0.5;
+                                    b2.vy *= 0.5;
+                                }
+                            } else {
+                                // Если мячи лежат спокойно - снижаем микро-движения
+                                if (Math.abs(b1.vx) < 0.5 && Math.abs(b1.vy) < 0.5) {
+                                    b1.vx *= 0.8;
+                                    b1.vy *= 0.8;
+                                }
+                                if (Math.abs(b2.vx) < 0.5 && Math.abs(b2.vy) < 0.5) {
+                                    b2.vx *= 0.8;
+                                    b2.vy *= 0.8;
+                                }
                             }
 
                             // Слияние одинаковых мячей
