@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Sport Stack</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            overflow: hidden;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            touch-action: none;
+        }
+
+        #gameContainer {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #topBar {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: white;
+            font-weight: bold;
+            backdrop-filter: blur(10px);
+        }
+
+        #score {
+            font-size: 24px;
+        }
+
+        #nextBall {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+        }
+
+        #canvas {
+            flex: 1;
+            display: block;
+            background: linear-gradient(to bottom, #2c3e50 0%, #34495e 100%);
+        }
+
+        #gameOver {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.95);
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            color: white;
+            display: none;
+            z-index: 1000;
+        }
+
+        #gameOver h1 {
+            font-size: 48px;
+            margin-bottom: 20px;
+            color: #e74c3c;
+        }
+
+        #gameOver p {
+            font-size: 24px;
+            margin-bottom: 30px;
+        }
+
+        #restartBtn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            color: white;
+            padding: 15px 40px;
+            font-size: 20px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: transform 0.2s;
+        }
+
+        #restartBtn:active {
+            transform: scale(0.95);
+        }
+
+        .emoji {
+            font-size: 32px;
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <div id="topBar">
+            <div id="score">СЧЁТ: <span id="scoreValue">0</span></div>
+            <div id="nextBall">
+                <span>ДАЛЬШЕ:</span>
+                <span class="emoji" id="nextBallEmoji">🏓</span>
+            </div>
+        </div>
+        <canvas id="canvas"></canvas>
+        <div id="gameOver">
+            <h1>GAME OVER!</h1>
+            <p>Финальный счёт: <span id="finalScore">0</span></p>
+            <button id="restartBtn">🔄 НОВАЯ ИГРА</button>
+        </div>
+    </div>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+        tg.disableVerticalSwipes();
+
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const scoreElement = document.getElementById('scoreValue');
+        const nextBallEmoji = document.getElementById('nextBallEmoji');
+        const gameOverDiv = document.getElementById('gameOver');
+        const finalScoreElement = document.getElementById('finalScore');
+        const restartBtn = document.getElementById('restartBtn');
+
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight - 60;
+
+        const BALL_TYPES = {
+            'ping_pong': { radius: 15, color: '#FFFFFF', emoji: '🏓', next: 'tennis', points: 15 },
+            'tennis': { radius: 20, color: '#ADFF2F', emoji: '🎾', next: 'baseball', points: 30 },
+            'baseball': { radius: 25, color: '#FFFFFF', emoji: '⚾', next: 'volleyball', points: 50 },
+            'volleyball': { radius: 35, color: '#FFFFFF', emoji: '🏐', next: 'football', points: 80 },
+            'football': { radius: 40, color: '#FFFFFF', emoji: '⚽', next: 'basketball', points: 120 },
+            'basketball': { radius: 50, color: '#FF8C00', emoji: '🏀', next: 'bowling', points: 170 },
+            'bowling': { radius: 60, color: '#000000', emoji: '🎳', next: 'medicine', points: 230 },
+            'medicine': { radius: 75, color: '#8B4513', emoji: '⚖️', next: 'exercise', points: 300 },
+            'exercise': { radius: 95, color: '#4682B4', emoji: '💪', next: null, points: 400 }
+        };
+
+        class Ball {
+            constructor(x, y, type) {
+                this.x = x;
+                this.y = y;
+                this.type = type;
+                this.radius = BALL_TYPES[type].radius;
+                this.color = BALL_TYPES[type].color;
+                this.vx = 0;
+                this.vy = 0;
+                this.merged = false;
+                this.age = 0;
+            }
+
+            draw() {
+                ctx.save();
+                ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+                ctx.shadowBlur = 10;
+                ctx.shadowOffsetX = 0;
+                ctx.shadowOffsetY = 5;
+
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fillStyle = this.color;
+                ctx.fill();
+                ctx.strokeStyle = '#333';
+                ctx.lineWidth = 3;
+                ctx.stroke();
+
+                ctx.shadowColor = 'transparent';
+                ctx.beginPath();
+                ctx.arc(this.x - this.radius/3, this.y - this.radius/3, this.radius/4, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+                ctx.fill();
+
+                ctx.restore();
+            }
+        }
+
+        class Game {
+            constructor() {
+                this.balls = [];
+                this.score = 0;
+                this.gameOver = false;
+                this.nextBallType = this.randomBallType();
+                this.dropX = canvas.width / 2;
+                this.containerY = 100;
+                this.containerLeft = 40;
+                this.containerRight = canvas.width - 40;
+                this.containerBottom = canvas.height - 30;
+                this.isDropping = false;
+            }
+
+            randomBallType() {
+                const types = ['ping_pong', 'tennis', 'baseball', 'volleyball'];
+                return types[Math.floor(Math.random() * types.length)];
+            }
+
+            dropBall() {
+                if (this.gameOver || this.isDropping) return;
+                this.isDropping = true;
+                const ball = new Ball(this.dropX, this.containerY - 30, this.nextBallType);
+                this.balls.push(ball);
+                this.nextBallType = this.randomBallType();
+                nextBallEmoji.textContent = BALL_TYPES[this.nextBallType].emoji;
+                
+                setTimeout(() => {
+                    this.isDropping = false;
+                }, 500);
+            }
+
+            updatePhysics() {
+                const gravity = 0.5;
+                const damping = 0.95;
+
+                for (let ball of this.balls) {
+                    if (ball.merged) continue;
+
+                    ball.age++;
+                    ball.vy += gravity;
+                    ball.x += ball.vx;
+                    ball.y += ball.vy;
+
+                    if (ball.x - ball.radius < this.containerLeft) {
+                        ball.x = this.containerLeft + ball.radius;
+                        ball.vx *= -damping;
+                    }
+                    if (ball.x + ball.radius > this.containerRight) {
+                        ball.x = this.containerRight - ball.radius;
+                        ball.vx *= -damping;
+                    }
+                    if (ball.y + ball.radius > this.containerBottom) {
+                        ball.y = this.containerBottom - ball.radius;
+                        ball.vy *= -damping;
+                        ball.vx *= damping;
+                    }
+
+                    if (ball.y - ball.radius < this.containerY && ball.age > 60 && Math.abs(ball.vy) < 1) {
+                        this.endGame();
+                    }
+                }
+
+                this.checkCollisions();
+            }
+
+            checkCollisions() {
+                const mergedPairs = [];
+
+                for (let i = 0; i < this.balls.length; i++) {
+                    const b1 = this.balls[i];
+                    if (b1.merged) continue;
+
+                    for (let j = i + 1; j < this.balls.length; j++) {
+                        const b2 = this.balls[j];
+                        if (b2.merged) continue;
+
+                        const dx = b2.x - b1.x;
+                        const dy = b2.y - b1.y;
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+                        const minDist = b1.radius + b2.radius;
+
+                        if (dist < minDist) {
+                            const overlap = minDist - dist;
+                            const nx = dx / dist;
+                            const ny = dy / dist;
+
+                            const impulse = overlap * 0.1;
+                            b1.vx -= nx * impulse;
+                            b1.vy -= ny * impulse;
+                            b2.vx += nx * impulse;
+                            b2.vy += ny * impulse;
+
+                            b1.x -= nx * overlap * 0.5;
+                            b1.y -= ny * overlap * 0.5;
+                            b2.x += nx * overlap * 0.5;
+                            b2.y += ny * overlap * 0.5;
+
+                            if (b1.type === b2.type && b1.age > 30 && b2.age > 30) {
+                                mergedPairs.push([i, j]);
+                            }
+                        }
+                    }
+                }
+
+                for (let [i, j] of mergedPairs) {
+                    const b1 = this.balls[i];
+                    const b2 = this.balls[j];
+                    const nextType = BALL_TYPES[b1.type].next;
+
+                    if (nextType) {
+                        const newBall = new Ball(
+                            (b1.x + b2.x) / 2,
+                            (b1.y + b2.y) / 2,
+                            nextType
+                        );
+                        this.balls.push(newBall);
+                        this.score += BALL_TYPES[nextType].points;
+                        scoreElement.textContent = this.score;
+                        
+                        if (tg.HapticFeedback) {
+                            tg.HapticFeedback.impactOccurred('medium');
+                        }
+                    }
+
+                    b1.merged = true;
+                    b2.merged = true;
+                }
+
+                this.balls = this.balls.filter(b => !b.merged);
+            }
+
+            render() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                ctx.fillStyle = 'rgba(236, 240, 241, 0.2)';
+                ctx.fillRect(this.containerLeft - 10, this.containerY, 10, this.containerBottom - this.containerY);
+                ctx.fillRect(this.containerRight, this.containerY, 10, this.containerBottom - this.containerY);
+                ctx.fillRect(this.containerLeft - 10, this.containerBottom, this.containerRight - this.containerLeft + 20, 10);
+
+                ctx.strokeStyle = '#e74c3c';
+                ctx.lineWidth = 3;
+                ctx.setLineDash([10, 5]);
+                ctx.beginPath();
+                ctx.moveTo(this.containerLeft, this.containerY);
+                ctx.lineTo(this.containerRight, this.containerY);
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                for (let ball of this.balls) {
+                    ball.draw();
+                }
+
+                const nextRadius = BALL_TYPES[this.nextBallType].radius;
+                const nextColor = BALL_TYPES[this.nextBallType].color;
+
+                ctx.setLineDash([5, 5]);
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(this.dropX, 60);
+                ctx.lineTo(this.dropX, this.containerY);
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                ctx.beginPath();
+                ctx.arc(this.dropX, this.containerY - 30, nextRadius, 0, Math.PI * 2);
+                ctx.strokeStyle = nextColor;
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            }
+
+            endGame() {
+                if (this.gameOver) return;
+                this.gameOver = true;
+                finalScoreElement.textContent = this.score;
+                gameOverDiv.style.display = 'block';
+                
+                if (tg.HapticFeedback) {
+                    tg.HapticFeedback.notificationOccurred('error');
+                }
+                
+                tg.MainButton.setText('НОВАЯ ИГРА');
+                tg.MainButton.show();
+                tg.MainButton.onClick(() => {
+                    location.reload();
+                });
+            }
+        }
+
+        const game = new Game();
+
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const rect = canvas.getBoundingClientRect();
+            game.dropX = touch.clientX - rect.left;
+            game.dropX = Math.max(game.containerLeft + 30, Math.min(game.containerRight - 30, game.dropX));
+        });
+
+        canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const rect = canvas.getBoundingClientRect();
+            game.dropX = touch.clientX - rect.left;
+            game.dropX = Math.max(game.containerLeft + 30, Math.min(game.containerRight - 30, game.dropX));
+        });
+
+        canvas.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            game.dropBall();
+        });
+
+        canvas.addEventListener('click', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            game.dropX = e.clientX - rect.left;
+            game.dropX = Math.max(game.containerLeft + 30, Math.min(game.containerRight - 30, game.dropX));
+            game.dropBall();
+        });
+
+        restartBtn.addEventListener('click', () => {
+            location.reload();
+        });
+
+        function gameLoop() {
+            if (!game.gameOver) {
+                game.updatePhysics();
+            }
+            game.render();
+            requestAnimationFrame(gameLoop);
+        }
+
+        gameLoop();
+        tg.ready();
+    </script>
+</body>
+</html>
