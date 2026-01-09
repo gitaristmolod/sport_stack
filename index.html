@@ -380,26 +380,289 @@
 
             draw() {
                 ctx.save();
-                ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
-                ctx.shadowBlur = 10;
+                
+                // Тень
+                ctx.shadowColor = 'rgba(0, 0, 0, 0.4)';
+                ctx.shadowBlur = 15;
                 ctx.shadowOffsetX = 0;
-                ctx.shadowOffsetY = 5;
+                ctx.shadowOffsetY = 8;
 
+                // Основной мяч
                 ctx.beginPath();
                 ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
                 ctx.fillStyle = this.color;
                 ctx.fill();
-                ctx.strokeStyle = '#333';
-                ctx.lineWidth = 3;
-                ctx.stroke();
 
                 ctx.shadowColor = 'transparent';
+
+                // Рисуем детали для каждого типа мяча
+                this.drawDetails();
+
+                // Контур мяча
+                ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
+                ctx.lineWidth = 2;
                 ctx.beginPath();
-                ctx.arc(this.x - this.radius/3, this.y - this.radius/3, this.radius/4, 0, Math.PI * 2);
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.stroke();
+
+                // Основной блик
+                const gradient = ctx.createRadialGradient(
+                    this.x - this.radius * 0.3, 
+                    this.y - this.radius * 0.3, 
+                    0,
+                    this.x - this.radius * 0.3, 
+                    this.y - this.radius * 0.3, 
+                    this.radius * 0.6
+                );
+                gradient.addColorStop(0, 'rgba(255, 255, 255, 0.8)');
+                gradient.addColorStop(0.5, 'rgba(255, 255, 255, 0.3)');
+                gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+                
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(this.x - this.radius * 0.3, this.y - this.radius * 0.3, this.radius * 0.6, 0, Math.PI * 2);
                 ctx.fill();
 
                 ctx.restore();
+            }
+
+            drawDetails() {
+                ctx.save();
+                
+                switch(this.type) {
+                    case 'ping_pong':
+                        // Простой белый мяч с легким оранжевым оттенком
+                        const ppGradient = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.radius);
+                        ppGradient.addColorStop(0, '#FFFFFF');
+                        ppGradient.addColorStop(1, '#FFE8D0');
+                        ctx.fillStyle = ppGradient;
+                        ctx.beginPath();
+                        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                        ctx.fill();
+                        break;
+
+                    case 'tennis':
+                        // Теннисный мяч с характерными линиями
+                        const tennisGradient = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.radius);
+                        tennisGradient.addColorStop(0, '#C8FF00');
+                        tennisGradient.addColorStop(1, '#9ACD32');
+                        ctx.fillStyle = tennisGradient;
+                        ctx.beginPath();
+                        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                        ctx.fill();
+                        
+                        // Характерные белые линии
+                        ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+                        ctx.lineWidth = 2;
+                        ctx.beginPath();
+                        ctx.arc(this.x, this.y, this.radius * 0.6, Math.PI * 0.2, Math.PI * 0.8);
+                        ctx.stroke();
+                        ctx.beginPath();
+                        ctx.arc(this.x, this.y, this.radius * 0.6, Math.PI * 1.2, Math.PI * 1.8);
+                        ctx.stroke();
+                        break;
+
+                    case 'baseball':
+                        // Бейсбольный мяч с красными швами
+                        const baseballGradient = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.radius);
+                        baseballGradient.addColorStop(0, '#FFFFFF');
+                        baseballGradient.addColorStop(1, '#F0F0F0');
+                        ctx.fillStyle = baseballGradient;
+                        ctx.beginPath();
+                        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                        ctx.fill();
+                        
+                        // Красные швы
+                        ctx.strokeStyle = '#DC143C';
+                        ctx.lineWidth = 2;
+                        ctx.setLineDash([4, 2]);
+                        ctx.beginPath();
+                        ctx.arc(this.x - this.radius * 0.3, this.y, this.radius * 0.8, -Math.PI * 0.5, Math.PI * 0.5);
+                        ctx.stroke();
+                        ctx.beginPath();
+                        ctx.arc(this.x + this.radius * 0.3, this.y, this.radius * 0.8, Math.PI * 0.5, Math.PI * 1.5);
+                        ctx.stroke();
+                        ctx.setLineDash([]);
+                        break;
+
+                    case 'volleyball':
+                        // Волейбольный мяч с панелями
+                        const vbGradient = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.radius);
+                        vbGradient.addColorStop(0, '#FFFFFF');
+                        vbGradient.addColorStop(1, '#E8E8E8');
+                        ctx.fillStyle = vbGradient;
+                        ctx.beginPath();
+                        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                        ctx.fill();
+                        
+                        // Синие линии панелей
+                        ctx.strokeStyle = '#4169E1';
+                        ctx.lineWidth = 2.5;
+                        for (let i = 0; i < 3; i++) {
+                            const angle = (Math.PI * 2 / 3) * i;
+                            ctx.beginPath();
+                            ctx.moveTo(this.x, this.y);
+                            ctx.lineTo(
+                                this.x + Math.cos(angle) * this.radius,
+                                this.y + Math.sin(angle) * this.radius
+                            );
+                            ctx.stroke();
+                        }
+                        break;
+
+                    case 'football':
+                        // Футбольный мяч с пятиугольниками
+                        const fbGradient = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.radius);
+                        fbGradient.addColorStop(0, '#FFFFFF');
+                        fbGradient.addColorStop(1, '#E0E0E0');
+                        ctx.fillStyle = fbGradient;
+                        ctx.beginPath();
+                        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                        ctx.fill();
+                        
+                        // Черные пятиугольники
+                        ctx.fillStyle = '#000000';
+                        const pentagonSize = this.radius * 0.3;
+                        this.drawPentagon(this.x, this.y - this.radius * 0.4, pentagonSize);
+                        this.drawPentagon(this.x - this.radius * 0.5, this.y + this.radius * 0.3, pentagonSize * 0.7);
+                        this.drawPentagon(this.x + this.radius * 0.5, this.y + this.radius * 0.3, pentagonSize * 0.7);
+                        break;
+
+                    case 'basketball':
+                        // Баскетбольный мяч с линиями
+                        const bbGradient = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.radius);
+                        bbGradient.addColorStop(0, '#FF8C00');
+                        bbGradient.addColorStop(1, '#D2691E');
+                        ctx.fillStyle = bbGradient;
+                        ctx.beginPath();
+                        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                        ctx.fill();
+                        
+                        // Черные линии
+                        ctx.strokeStyle = '#000000';
+                        ctx.lineWidth = 3;
+                        ctx.beginPath();
+                        ctx.arc(this.x, this.y, this.radius * 0.7, 0, Math.PI * 2);
+                        ctx.stroke();
+                        
+                        ctx.beginPath();
+                        ctx.moveTo(this.x - this.radius, this.y);
+                        ctx.lineTo(this.x + this.radius, this.y);
+                        ctx.stroke();
+                        
+                        ctx.beginPath();
+                        ctx.arc(this.x - this.radius * 0.7, this.y, this.radius * 0.5, -Math.PI * 0.5, Math.PI * 0.5);
+                        ctx.stroke();
+                        ctx.beginPath();
+                        ctx.arc(this.x + this.radius * 0.7, this.y, this.radius * 0.5, Math.PI * 0.5, Math.PI * 1.5);
+                        ctx.stroke();
+                        break;
+
+                    case 'bowling':
+                        // Шар для боулинга
+                        const bowlingGradient = ctx.createRadialGradient(
+                            this.x - this.radius * 0.3, 
+                            this.y - this.radius * 0.3, 
+                            0,
+                            this.x, 
+                            this.y, 
+                            this.radius
+                        );
+                        bowlingGradient.addColorStop(0, '#1a1a1a');
+                        bowlingGradient.addColorStop(0.7, '#000000');
+                        bowlingGradient.addColorStop(1, '#0a0a0a');
+                        ctx.fillStyle = bowlingGradient;
+                        ctx.beginPath();
+                        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                        ctx.fill();
+                        
+                        // Дырки для пальцев
+                        ctx.fillStyle = '#000000';
+                        ctx.strokeStyle = '#333333';
+                        ctx.lineWidth = 2;
+                        const holeSize = this.radius * 0.12;
+                        const holes = [
+                            {x: this.x, y: this.y - this.radius * 0.3},
+                            {x: this.x - this.radius * 0.2, y: this.y + this.radius * 0.1},
+                            {x: this.x + this.radius * 0.2, y: this.y + this.radius * 0.1}
+                        ];
+                        holes.forEach(hole => {
+                            ctx.beginPath();
+                            ctx.arc(hole.x, hole.y, holeSize, 0, Math.PI * 2);
+                            ctx.fill();
+                            ctx.stroke();
+                        });
+                        break;
+
+                    case 'medicine':
+                        // Медицинский мяч
+                        const medGradient = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.radius);
+                        medGradient.addColorStop(0, '#A0522D');
+                        medGradient.addColorStop(1, '#654321');
+                        ctx.fillStyle = medGradient;
+                        ctx.beginPath();
+                        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                        ctx.fill();
+                        
+                        // Швы
+                        ctx.strokeStyle = '#DEB887';
+                        ctx.lineWidth = 3;
+                        ctx.setLineDash([6, 4]);
+                        for (let i = 0; i < 4; i++) {
+                            const angle = (Math.PI / 2) * i;
+                            ctx.beginPath();
+                            ctx.arc(this.x, this.y, this.radius * 0.8, angle, angle + Math.PI / 2);
+                            ctx.stroke();
+                        }
+                        ctx.setLineDash([]);
+                        break;
+
+                    case 'exercise':
+                        // Фитбол
+                        const exGradient = ctx.createRadialGradient(
+                            this.x - this.radius * 0.3, 
+                            this.y - this.radius * 0.3, 
+                            0,
+                            this.x, 
+                            this.y, 
+                            this.radius
+                        );
+                        exGradient.addColorStop(0, '#87CEEB');
+                        exGradient.addColorStop(0.5, '#4682B4');
+                        exGradient.addColorStop(1, '#27408B');
+                        ctx.fillStyle = exGradient;
+                        ctx.beginPath();
+                        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                        ctx.fill();
+                        
+                        // Горизонтальные полосы
+                        ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+                        ctx.lineWidth = 2;
+                        for (let i = -2; i <= 2; i++) {
+                            const y = this.y + i * this.radius * 0.3;
+                            const width = Math.sqrt(this.radius * this.radius - (i * this.radius * 0.3) * (i * this.radius * 0.3));
+                            ctx.beginPath();
+                            ctx.moveTo(this.x - width, y);
+                            ctx.lineTo(this.x + width, y);
+                            ctx.stroke();
+                        }
+                        break;
+                }
+                
+                ctx.restore();
+            }
+
+            drawPentagon(x, y, size) {
+                ctx.beginPath();
+                for (let i = 0; i < 5; i++) {
+                    const angle = (Math.PI * 2 / 5) * i - Math.PI / 2;
+                    const px = x + Math.cos(angle) * size;
+                    const py = y + Math.sin(angle) * size;
+                    if (i === 0) ctx.moveTo(px, py);
+                    else ctx.lineTo(px, py);
+                }
+                ctx.closePath();
+                ctx.fill();
             }
         }
 
